@@ -47,17 +47,17 @@ func (sf *SyncFile) Read(size int64, seek int64) ([]byte, error) {
 }
 
 func (sf *SyncFile) read(buf *bytes.Buffer, size int64, seek int64) ([]byte, error) {
-	sf.mu.Lock() //with RLock -  not working
-	defer sf.mu.Unlock()
+	sf.mu.RLock() //with RLock -  not working
+	defer sf.mu.RUnlock()
 	var err error
-	_, err = sf.f.Seek(seek, 0) //problem here - not real seek issue https://github.com/golang/go/issues/24035
+	//_, err = sf.f.Seek(seek, 0) //problem here - not real seek issue https://github.com/golang/go/issues/24035
 	if err != nil {
 		return nil, err
 	}
 	byteSlice := make([]byte, size)
 	buf.Grow(int(size))
 	//TODO read by chanks
-	_, err = sf.f.Read(byteSlice)
+	_, err = sf.f.ReadAt(byteSlice, seek) // .Read(byteSlice)
 	//fmt.Println("seek:", ret, "read:", string(byteSlice))
 	buf.Write(byteSlice)
 	if err != nil {

@@ -37,12 +37,12 @@ func TestAppend(t *testing.T) {
 	read := func(i int) {
 		defer wg.Done()
 
-		b, err := sf.Read(3, 0)
+		b, err := sf.Read(10, 0)
 		//content, err := ioutil.ReadFile(file)
 		if err != nil {
 			t.Error(err)
 		}
-		if string(b) != "123" {
+		if string(b) != "1234567890" {
 			t.Error("not seek to beginning of file with Rlock")
 		}
 		readmessages <- fmt.Sprintf("read N:%d  content:%s", i, string(b))
