@@ -38,6 +38,18 @@ func (sf *SyncFile) Append(b []byte) error {
 	return sf.write(buf.Bytes())
 }
 
+// ReadFile reads the file named by filename and returns the contents.
+// A successful call returns err == nil, not err == EOF. Because ReadFile
+// reads the whole file, it does not treat an EOF from Read as an error
+// to be reported.
+func (sf *SyncFile) ReadFile() ([]byte, error) {
+	fi, err := sf.f.Stat()
+	if err != nil || fi.Size() == 0 {
+		return nil, err
+	}
+	return sf.Read(fi.Size(), 0)
+}
+
 // Read read size bytes from seek
 func (sf *SyncFile) Read(size int64, seek int64) ([]byte, error) {
 	buf := bufPool.Get().(*bytes.Buffer)
@@ -58,7 +70,7 @@ func (sf *SyncFile) read(buf *bytes.Buffer, size int64, seek int64) ([]byte, err
 	buf.Grow(int(size))
 	//TODO read by chanks
 	_, err = sf.f.ReadAt(byteSlice, seek) // .Read(byteSlice)
-	//fmt.Println("seek:", ret, "read:", string(byteSlice))
+
 	buf.Write(byteSlice)
 	if err != nil {
 		return nil, err
