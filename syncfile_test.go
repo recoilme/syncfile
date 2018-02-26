@@ -31,7 +31,7 @@ func TestAppend(t *testing.T) {
 
 	append := func(i int) {
 		defer wg.Done()
-		s := strconv.Itoa(i)
+		s := " " + strconv.Itoa(i) + " "
 		sf.Append([]byte(s))
 		messages <- i
 	}
@@ -108,7 +108,7 @@ func TestReadAppend(t *testing.T) {
 
 	append := func(i int) {
 		defer wg.Done()
-		s := strconv.Itoa(i)
+		s := " " + strconv.Itoa(i) + " "
 		sf.Append([]byte(s))
 		messages <- i
 	}
