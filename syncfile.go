@@ -31,20 +31,20 @@ func NewSyncFile(name string, perm os.FileMode) (*SyncFile, error) {
 }
 
 // Append appends the given byte array to the file.
-func (sf *SyncFile) Append(b []byte) (n int, err error) {
+func (sf *SyncFile) Append(b []byte) (seek int64, n int, err error) {
 	return sf.Write(b)
 }
 
 // Write writes len(b) bytes to the File.
 // It returns the number of bytes written and an error, if any.
 // Write returns a non-nil error when n != len(b).
-func (sf *SyncFile) Write(b []byte) (n int, err error) {
+func (sf *SyncFile) Write(b []byte) (seek int64, n int, err error) {
 	buf := bufPool.Get().(*bytes.Buffer)
 	defer bufPool.Put(buf)
 	buf.Reset()
 	n, err = buf.Write(b)
 	if err != nil {
-		return n, err
+		return 0, n, err
 	}
 	return sf.write(buf.Bytes())
 }
@@ -88,15 +88,18 @@ func (sf *SyncFile) read(buf *bytes.Buffer, size int64, seek int64) ([]byte, err
 	return buf.Bytes(), nil
 }
 
-func (sf *SyncFile) write(b []byte) (n int, err error) {
+func (sf *SyncFile) write(b []byte) (seek int64, n int, err error) {
 	sf.mu.Lock()
 	defer sf.mu.Unlock()
-	//sf.f.Seek(0, 2)
-	n, err = sf.f.Write(b)
+	seek, err = sf.f.Seek(0, 2)
 	if err != nil {
-		return n, err
+		return seek, 0, err
 	}
-	return n, sf.f.Sync() // ensure that the write is done.
+	n, err = sf.f.WriteAt(b, seek)
+	if err != nil {
+		return seek, n, err
+	}
+	return seek, n, sf.f.Sync() // ensure that the write is done.
 }
 
 // Close closes the underlying file.
