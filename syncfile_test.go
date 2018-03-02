@@ -151,3 +151,23 @@ func TestReadAppend(t *testing.T) {
 	wg.Wait()
 
 }
+
+/*
+//no errors (
+func TestWriteAt(t *testing.T) {
+
+	file := "wa.tmp"
+	//os.Remove(file)
+	f, _ := NewSyncFile(file, 0666)
+	defer f.Close()
+	//for i := 0; i < 119; i++ {
+	i := 200
+	j := []byte(strconv.Itoa(i))
+	//if i < 10 {
+	fmt.Println(f.WriteAt(j, int64(i)))
+	//	} else {
+	//	fmt.Println(f.WriteAt(j, int64(i/10)))
+	//}
+	//}
+}
+*/
