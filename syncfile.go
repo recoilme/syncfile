@@ -2,7 +2,6 @@
 package syncfile
 
 import (
-	"bytes"
 	"errors"
 	"os"
 	"sync"
@@ -39,14 +38,17 @@ func (sf *SyncFile) Append(b []byte) (seek int64, n int, err error) {
 // It returns the number of bytes written and an error, if any.
 // Write returns a non-nil error when n != len(b).
 func (sf *SyncFile) Write(b []byte) (seek int64, n int, err error) {
-	buf := bufPool.Get().(*bytes.Buffer)
-	defer bufPool.Put(buf)
-	buf.Reset()
-	_, err = buf.Write(b)
+	sf.mu.Lock()
+	defer sf.mu.Unlock()
+	seek, err = sf.f.Seek(0, 2)
 	if err != nil {
-		return 0, 0, err
+		return seek, 0, err
 	}
-	return sf.write(buf.Bytes())
+	n, err = sf.f.WriteAt(b, seek)
+	if err != nil {
+		return seek, n, err
+	}
+	return seek, n, sf.f.Sync() // ensure that the write is done.
 }
 
 // ReadFile reads the file named by filename and returns the contents.
@@ -63,43 +65,20 @@ func (sf *SyncFile) ReadFile() ([]byte, error) {
 
 // Read read size bytes from seek
 func (sf *SyncFile) Read(size int64, seek int64) ([]byte, error) {
-	buf := bufPool.Get().(*bytes.Buffer)
-	defer bufPool.Put(buf)
-	buf.Reset()
-	return sf.read(buf, size, seek)
-}
-
-func (sf *SyncFile) read(buf *bytes.Buffer, size int64, seek int64) ([]byte, error) {
 	sf.mu.RLock() //with RLock -  not working
 	defer sf.mu.RUnlock()
 	var err error
-	if err != nil {
-		return nil, err
-	}
+
 	byteSlice := make([]byte, size)
-	buf.Grow(int(size))
+
 	//TODO read by chanks
 	_, err = sf.f.ReadAt(byteSlice, seek) // .Read(byteSlice)
 
-	buf.Write(byteSlice)
+	//buf.Write(byteSlice)
 	if err != nil {
 		return nil, err
 	}
-	return buf.Bytes(), nil
-}
-
-func (sf *SyncFile) write(b []byte) (seek int64, n int, err error) {
-	sf.mu.Lock()
-	defer sf.mu.Unlock()
-	seek, err = sf.f.Seek(0, 2)
-	if err != nil {
-		return seek, 0, err
-	}
-	n, err = sf.f.WriteAt(b, seek)
-	if err != nil {
-		return seek, n, err
-	}
-	return seek, n, sf.f.Sync() // ensure that the write is done.
+	return byteSlice, nil
 }
 
 // WriteAt writes len(b) bytes to the File at offest off.
@@ -107,13 +86,6 @@ func (sf *SyncFile) write(b []byte) (seek int64, n int, err error) {
 // It returns the number of bytes written and an error, if any.
 // Write returns a non-nil error when n != len(b).
 func (sf *SyncFile) WriteAt(b []byte, off int64) (seek int64, n int, err error) {
-	buf := bufPool.Get().(*bytes.Buffer)
-	defer bufPool.Put(buf)
-	buf.Reset()
-	_, err = buf.Write(b)
-	if err != nil {
-		return 0, 0, err
-	}
 	sf.mu.Lock()
 	defer sf.mu.Unlock()
 	if off < 0 {
@@ -137,10 +109,4 @@ func (sf *SyncFile) Close() error {
 		return errors.New("Error: file is nil")
 	}
 	return sf.f.Close()
-}
-
-var bufPool = &sync.Pool{
-	New: func() interface{} {
-		return new(bytes.Buffer)
-	},
 }
