@@ -51,6 +51,27 @@ func (sf *SyncFile) Write(b []byte) (seek int64, n int, err error) {
 	return seek, n, sf.f.Sync() // ensure that the write is done.
 }
 
+// WriteNoSync writes len(b) bytes to the File without sync
+// It returns the number of bytes written and an error, if any.
+// Write returns a non-nil error when n != len(b).
+func (sf *SyncFile) WriteNoSync(b []byte) (seek int64, n int, err error) {
+	sf.mu.Lock()
+	defer sf.mu.Unlock()
+	seek, err = sf.f.Seek(0, 2)
+	if err != nil {
+		return seek, 0, err
+	}
+	n, err = sf.f.WriteAt(b, seek)
+	return seek, n, err // not ensure that the write is done.
+}
+
+// Sync do sync on file
+func (sf *SyncFile) Sync() error {
+	sf.mu.Lock()
+	defer sf.mu.Unlock()
+	return sf.f.Sync()
+}
+
 // ReadFile reads the file named by filename and returns the contents.
 // A successful call returns err == nil, not err == EOF. Because ReadFile
 // reads the whole file, it does not treat an EOF from Read as an error
