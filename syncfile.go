@@ -119,7 +119,7 @@ func (sf *SyncFile) WriteAt(b []byte, off int64) (seek int64, n int, err error) 
 	if err != nil {
 		return off, n, err
 	}
-	return seek, n, sf.f.Sync()
+	return off, n, sf.f.Sync()
 }
 
 // Close closes the underlying file.
